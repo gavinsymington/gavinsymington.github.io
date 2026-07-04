@@ -1,0 +1,573 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>WIRE — Daily Desk</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Fraunces:ital,opsz,wght@0,9..144,400;0,9..144,600;1,9..144,500&family=Inter:wght@400;500;600&family=IBM+Plex+Mono:wght@400;500&display=swap" rel="stylesheet">
+<style>
+  :root{
+    --bg:#FAFAF7;
+    --card:#FFFFFF;
+    --ink:#17181A;
+    --muted:#6B6D70;
+    --line:#E4E2DD;
+    --accent:#2B4570;
+    --up:#1F7A4D;
+    --down:#B0402C;
+    --radius:2px;
+  }
+  *{box-sizing:border-box;}
+  html{ -webkit-font-smoothing:antialiased; }
+  body{
+    margin:0;
+    background:var(--bg);
+    color:var(--ink);
+    font-family:'Inter',sans-serif;
+    line-height:1.4;
+  }
+  @media (prefers-reduced-motion: reduce){
+    * { animation:none !important; transition:none !important; }
+  }
+
+  /* ---------- Masthead ---------- */
+  .masthead{
+    display:flex;
+    align-items:baseline;
+    justify-content:space-between;
+    padding:28px 32px 18px;
+    border-bottom:1px solid var(--line);
+    flex-wrap:wrap;
+    gap:10px;
+  }
+  .masthead h1{
+    font-family:'Fraunces', serif;
+    font-weight:600;
+    font-size:30px;
+    letter-spacing:0.5px;
+    margin:0;
+  }
+  .masthead .sub{
+    font-family:'IBM Plex Mono', monospace;
+    font-size:12px;
+    color:var(--muted);
+    text-align:right;
+  }
+  .live-dot{
+    display:inline-block;
+    width:6px;height:6px;
+    border-radius:50%;
+    background:var(--accent);
+    margin-right:6px;
+    animation:pulse 2.4s ease-in-out infinite;
+    position:relative;
+    top:-1px;
+  }
+  @keyframes pulse{
+    0%,100%{opacity:1;}
+    50%{opacity:0.25;}
+  }
+
+  /* ---------- Ticker ---------- */
+  .ticker-wrap{
+    border-bottom:1px solid var(--line);
+    overflow:hidden;
+    background:var(--card);
+    white-space:nowrap;
+  }
+  .ticker{
+    display:inline-block;
+    padding:9px 0;
+    font-family:'IBM Plex Mono', monospace;
+    font-size:12.5px;
+    animation:scroll 42s linear infinite;
+  }
+  .ticker span{ margin:0 26px; color:var(--muted); }
+  .ticker span b{ color:var(--ink); font-weight:500; }
+  .ticker .up{ color:var(--up); }
+  .ticker .down{ color:var(--down); }
+  @keyframes scroll{
+    0%{ transform:translateX(0); }
+    100%{ transform:translateX(-50%); }
+  }
+
+  /* ---------- Grid ---------- */
+  .grid{
+    display:grid;
+    grid-template-columns:repeat(3, 1fr);
+    gap:1px;
+    background:var(--line);
+    max-width:1180px;
+    margin:0 auto;
+  }
+  @media (max-width:900px){
+    .grid{ grid-template-columns:repeat(2,1fr); }
+  }
+  @media (max-width:620px){
+    .grid{ grid-template-columns:1fr; }
+  }
+  .card{
+    background:var(--card);
+    padding:22px 24px 20px;
+    display:flex;
+    flex-direction:column;
+    min-height:260px;
+  }
+  .card-head{
+    display:flex;
+    justify-content:space-between;
+    align-items:baseline;
+    border-bottom:1px solid var(--line);
+    padding-bottom:8px;
+    margin-bottom:14px;
+  }
+  .card-head h2{
+    font-family:'Inter',sans-serif;
+    font-size:11px;
+    font-weight:600;
+    letter-spacing:1.6px;
+    text-transform:uppercase;
+    margin:0;
+    color:var(--ink);
+  }
+  .card-head .updated{
+    font-family:'IBM Plex Mono', monospace;
+    font-size:10px;
+    color:var(--muted);
+  }
+  .card-body{ flex:1; }
+
+  /* headline list */
+  .headline-list{ list-style:none; margin:0; padding:0; }
+  .headline-list li{
+    padding:9px 0;
+    border-bottom:1px solid var(--line);
+    font-family:'Fraunces', serif;
+    font-size:15px;
+    line-height:1.3;
+  }
+  .headline-list li:last-child{ border-bottom:none; }
+  .headline-list a{ color:var(--ink); text-decoration:none; }
+  .headline-list a:hover{ color:var(--accent); text-decoration:underline; }
+  .headline-list .section{
+    font-family:'IBM Plex Mono', monospace;
+    font-size:9.5px;
+    color:var(--muted);
+    text-transform:uppercase;
+    letter-spacing:0.6px;
+    display:block;
+    margin-bottom:2px;
+  }
+
+  /* table style (markets) */
+  table{ width:100%; border-collapse:collapse; font-family:'IBM Plex Mono', monospace; font-size:13px; }
+  table td{ padding:8px 0; border-bottom:1px solid var(--line); }
+  table tr:last-child td{ border-bottom:none; }
+  td.sym{ font-weight:500; }
+  td.name{ color:var(--muted); font-family:'Inter',sans-serif; font-size:11.5px; }
+  td.price{ text-align:right; }
+  td.delta{ text-align:right; }
+  .up{ color:var(--up); }
+  .down{ color:var(--down); }
+
+  /* video list */
+  .video-list{ list-style:none; margin:0; padding:0; }
+  .video-list li{
+    display:flex;
+    gap:10px;
+    padding:9px 0;
+    border-bottom:1px solid var(--line);
+  }
+  .video-list li:last-child{ border-bottom:none; }
+  .video-list .thumb{
+    width:64px; height:38px;
+    object-fit:cover;
+    background:var(--line);
+    flex-shrink:0;
+  }
+  .video-list a{ color:var(--ink); text-decoration:none; font-size:13px; line-height:1.25; }
+  .video-list a:hover{ color:var(--accent); }
+  .video-list .chan{ font-family:'IBM Plex Mono', monospace; font-size:10px; color:var(--muted); display:block; margin-top:2px; }
+
+  /* weather */
+  .weather-hero{ display:flex; align-items:baseline; gap:10px; }
+  .weather-hero .temp{ font-family:'Fraunces', serif; font-size:44px; font-weight:600; }
+  .weather-hero .desc{ font-size:13px; color:var(--muted); }
+  .weather-grid{ display:grid; grid-template-columns:1fr 1fr; gap:8px 16px; margin-top:16px; font-family:'IBM Plex Mono', monospace; font-size:12px; }
+  .weather-grid div span{ color:var(--muted); display:block; font-size:10px; text-transform:uppercase; letter-spacing:0.5px; margin-bottom:2px; }
+
+  /* on this day */
+  .otd-item{ padding:9px 0; border-bottom:1px solid var(--line); font-size:13px; }
+  .otd-item:last-child{ border-bottom:none; }
+  .otd-year{ font-family:'IBM Plex Mono', monospace; color:var(--accent); font-weight:500; margin-right:6px; }
+
+  .loading{ color:var(--muted); font-size:12.5px; font-family:'IBM Plex Mono', monospace; }
+  .fallback-note{
+    font-family:'IBM Plex Mono', monospace;
+    font-size:9.5px;
+    color:var(--muted);
+    margin-top:10px;
+    padding-top:8px;
+    border-top:1px dashed var(--line);
+  }
+
+  footer{
+    text-align:center;
+    padding:22px;
+    font-family:'IBM Plex Mono', monospace;
+    font-size:11px;
+    color:var(--muted);
+  }
+</style>
+</head>
+<body>
+
+<div class="masthead">
+  <h1>WIRE</h1>
+  <div class="sub"><span class="live-dot"></span><span id="clock">--:--:--</span> &nbsp;·&nbsp; <span id="date">—</span></div>
+</div>
+
+<div class="ticker-wrap">
+  <div class="ticker" id="ticker">
+    <span class="loading">Loading ticker…</span>
+  </div>
+</div>
+
+<div class="grid">
+
+  <div class="card">
+    <div class="card-head">
+      <h2>Headlines · NYT</h2>
+      <span class="updated" id="nyt-updated">—</span>
+    </div>
+    <div class="card-body">
+      <ul class="headline-list" id="nyt-list"><li class="loading">Loading headlines…</li></ul>
+    </div>
+  </div>
+
+  <div class="card">
+    <div class="card-head">
+      <h2>Markets</h2>
+      <span class="updated" id="stocks-updated">—</span>
+    </div>
+    <div class="card-body">
+      <table id="stocks-table"><tbody><tr><td class="loading">Loading quotes…</td></tr></tbody></table>
+    </div>
+  </div>
+
+  <div class="card">
+    <div class="card-head">
+      <h2>Crypto</h2>
+      <span class="updated" id="crypto-updated">—</span>
+    </div>
+    <div class="card-body">
+      <table id="crypto-table"><tbody><tr><td class="loading">Loading prices…</td></tr></tbody></table>
+    </div>
+  </div>
+
+  <div class="card">
+    <div class="card-head">
+      <h2>Video Feed</h2>
+      <span class="updated" id="yt-updated">—</span>
+    </div>
+    <div class="card-body">
+      <ul class="video-list" id="yt-list"><li class="loading">Loading videos…</li></ul>
+      <div class="fallback-note">Latest uploads from a curated set of channels — YouTube's official Trending list requires a private API key, so this is the closest live feed available without one.</div>
+    </div>
+  </div>
+
+  <div class="card">
+    <div class="card-head">
+      <h2>Weather</h2>
+      <span class="updated" id="wx-updated">—</span>
+    </div>
+    <div class="card-body" id="wx-body">
+      <span class="loading">Locating…</span>
+    </div>
+  </div>
+
+  <div class="card">
+    <div class="card-head">
+      <h2>On This Day</h2>
+      <span class="updated" id="otd-updated">—</span>
+    </div>
+    <div class="card-body" id="otd-body">
+      <span class="loading">Loading history…</span>
+    </div>
+  </div>
+
+</div>
+
+<footer>Personal desk — data refreshes automatically. Some widgets fall back to sample data if a live source is unreachable.</footer>
+
+<script>
+/* ---------------- utilities ---------------- */
+function timeAgoLabel(){
+  return new Date().toLocaleTimeString([], {hour:'2-digit', minute:'2-digit'});
+}
+function setUpdated(id){
+  const el = document.getElementById(id);
+  if(el) el.textContent = 'updated ' + timeAgoLabel();
+}
+function fmtPct(p){
+  const s = p >= 0 ? '+' : '';
+  return s + p.toFixed(2) + '%';
+}
+
+/* ---------------- clock ---------------- */
+function tickClock(){
+  const now = new Date();
+  document.getElementById('clock').textContent = now.toLocaleTimeString([], {hour12:false});
+  document.getElementById('date').textContent = now.toLocaleDateString([], {weekday:'short', month:'short', day:'numeric'});
+}
+tickClock();
+setInterval(tickClock, 1000);
+
+/* ---------------- NYT headlines ---------------- */
+async function loadNYT(){
+  const list = document.getElementById('nyt-list');
+  const fallback = [
+    {title:"Markets steady as investors weigh rate outlook", section:"Business"},
+    {title:"Cities expand transit access ahead of summer travel season", section:"U.S."},
+    {title:"Researchers report progress on longer-lasting batteries", section:"Science"},
+    {title:"A quiet week in Washington gives way to a busy one", section:"Politics"},
+    {title:"What to know about this week's tech earnings", section:"Technology"}
+  ];
+  try{
+    const res = await fetch('https://api.rss2json.com/v1/api.json?rss_url=' + encodeURIComponent('https://rss.nytimes.com/services/xml/rss/nyt/HomePage.xml'));
+    if(!res.ok) throw new Error('bad response');
+    const data = await res.json();
+    if(!data.items || !data.items.length) throw new Error('empty');
+    list.innerHTML = data.items.slice(0,8).map(item => `
+      <li>
+        <span class="section">${(item.categories && item.categories[0]) ? item.categories[0] : 'NYT'}</span>
+        <a href="${item.link}" target="_blank" rel="noopener">${item.title}</a>
+      </li>`).join('');
+  }catch(e){
+    list.innerHTML = fallback.map(f => `
+      <li><span class="section">${f.section}</span>${f.title}</li>`).join('');
+    document.getElementById('nyt-list').insertAdjacentHTML('afterend', '<div class="fallback-note">Live feed unreachable — showing sample headlines.</div>');
+  }
+  setUpdated('nyt-updated');
+}
+
+/* ---------------- Stocks + ticker ---------------- */
+const STOCK_SYMBOLS = ['AAPL','MSFT','GOOGL','AMZN','NVDA','TSLA'];
+async function loadStocks(){
+  const tbody = document.querySelector('#stocks-table tbody');
+  const fallback = [
+    {symbol:'AAPL', name:'Apple', price:213.44, pct:0.62},
+    {symbol:'MSFT', name:'Microsoft', price:441.20, pct:-0.18},
+    {symbol:'GOOGL', name:'Alphabet', price:176.90, pct:1.05},
+    {symbol:'AMZN', name:'Amazon', price:198.30, pct:0.24},
+    {symbol:'NVDA', name:'Nvidia', price:132.55, pct:-1.12},
+    {symbol:'TSLA', name:'Tesla', price:244.10, pct:2.03}
+  ];
+  let quotes = null;
+  try{
+    const url = 'https://query1.finance.yahoo.com/v7/finance/quote?symbols=' + STOCK_SYMBOLS.join(',');
+    const res = await fetch('https://api.allorigins.win/raw?url=' + encodeURIComponent(url));
+    if(!res.ok) throw new Error('bad response');
+    const data = await res.json();
+    const results = data.quoteResponse && data.quoteResponse.result;
+    if(!results || !results.length) throw new Error('empty');
+    quotes = results.map(r => ({
+      symbol: r.symbol,
+      name: r.shortName || r.symbol,
+      price: r.regularMarketPrice,
+      pct: r.regularMarketChangePercent
+    }));
+  }catch(e){
+    quotes = fallback;
+  }
+  renderQuoteTable(tbody, quotes, '$');
+  buildTicker(quotes, 'stocks');
+  setUpdated('stocks-updated');
+}
+
+function renderQuoteTable(tbody, rows, prefix){
+  tbody.innerHTML = rows.map(q => {
+    const cls = q.pct >= 0 ? 'up' : 'down';
+    return `<tr>
+      <td class="sym">${q.symbol}<br><span class="name">${q.name}</span></td>
+      <td class="price">${prefix}${Number(q.price).toLocaleString(undefined,{maximumFractionDigits:2})}</td>
+      <td class="delta ${cls}">${fmtPct(q.pct)}</td>
+    </tr>`;
+  }).join('');
+}
+
+let tickerData = {stocks:[], crypto:[]};
+function buildTicker(rows, kind){
+  tickerData[kind] = rows;
+  const all = [...tickerData.stocks, ...tickerData.crypto];
+  if(!all.length) return;
+  const items = all.map(q => {
+    const cls = q.pct >= 0 ? 'up' : 'down';
+    return `<span><b>${q.symbol}</b> ${Number(q.price).toLocaleString(undefined,{maximumFractionDigits:2})} <span class="${cls}">${fmtPct(q.pct)}</span></span>`;
+  }).join('');
+  document.getElementById('ticker').innerHTML = items + items; // duplicate for seamless scroll
+}
+
+/* ---------------- Crypto ---------------- */
+async function loadCrypto(){
+  const tbody = document.querySelector('#crypto-table tbody');
+  const fallback = [
+    {symbol:'BTC', name:'Bitcoin', price:64200, pct:1.4},
+    {symbol:'ETH', name:'Ethereum', price:3450, pct:-0.6},
+    {symbol:'SOL', name:'Solana', price:148, pct:3.1}
+  ];
+  let rows = null;
+  try{
+    const ids = 'bitcoin,ethereum,solana';
+    const res = await fetch(`https://api.coingecko.com/api/v3/simple/price?ids=${ids}&vs_currencies=usd&include_24hr_change=true`);
+    if(!res.ok) throw new Error('bad response');
+    const data = await res.json();
+    const map = {bitcoin:'BTC', ethereum:'ETH', solana:'SOL'};
+    const names = {bitcoin:'Bitcoin', ethereum:'Ethereum', solana:'Solana'};
+    rows = Object.keys(map).map(k => ({
+      symbol: map[k],
+      name: names[k],
+      price: data[k].usd,
+      pct: data[k].usd_24h_change
+    }));
+    if(rows.some(r => r.price === undefined)) throw new Error('incomplete');
+  }catch(e){
+    rows = fallback;
+  }
+  renderQuoteTable(tbody, rows, '$');
+  buildTicker(rows, 'crypto');
+  setUpdated('crypto-updated');
+}
+
+/* ---------------- YouTube (channel RSS, no key required) ---------------- */
+const YT_CHANNELS = [
+  {id:'UCBJycsmduvYEL83R_U4JriQ', name:'MKBHD'},
+  {id:'UCsXVk37bltHxD1rDPwtNM8Q', name:'Kurzgesagt'},
+  {id:'UC6nSFpj9HTCZ5t-N3Rm3-HA', name:'Vsauce'}
+];
+async function loadYouTube(){
+  const list = document.getElementById('yt-list');
+  const fallback = [
+    {title:'A closer look at this year\'s flagship phones', chan:'MKBHD'},
+    {title:'Why entropy always wins, eventually', chan:'Kurzgesagt'},
+    {title:'The strange math behind everyday coincidences', chan:'Vsauce'}
+  ];
+  try{
+    const items = [];
+    for(const ch of YT_CHANNELS){
+      const rss = `https://www.youtube.com/feeds/videos.xml?channel_id=${ch.id}`;
+      const res = await fetch('https://api.rss2json.com/v1/api.json?rss_url=' + encodeURIComponent(rss));
+      if(!res.ok) continue;
+      const data = await res.json();
+      if(data.items && data.items.length){
+        const it = data.items[0];
+        items.push({
+          title: it.title,
+          chan: ch.name,
+          link: it.link,
+          thumb: (it.thumbnail) ? it.thumbnail : ''
+        });
+      }
+    }
+    if(!items.length) throw new Error('empty');
+    list.innerHTML = items.map(v => `
+      <li>
+        ${v.thumb ? `<img class="thumb" src="${v.thumb}" alt="">` : ''}
+        <a href="${v.link}" target="_blank" rel="noopener">${v.title}<span class="chan">${v.chan}</span></a>
+      </li>`).join('');
+  }catch(e){
+    list.innerHTML = fallback.map(v => `
+      <li><a>${v.title}<span class="chan">${v.chan}</span></a></li>`).join('');
+  }
+  setUpdated('yt-updated');
+}
+
+/* ---------------- Weather (Open-Meteo, no key) ---------------- */
+function wmoDesc(code){
+  const map = {0:'Clear sky',1:'Mostly clear',2:'Partly cloudy',3:'Overcast',45:'Fog',48:'Fog',
+    51:'Light drizzle',61:'Light rain',63:'Rain',65:'Heavy rain',71:'Light snow',73:'Snow',
+    75:'Heavy snow',80:'Rain showers',95:'Thunderstorm'};
+  return map[code] || 'Mixed conditions';
+}
+async function loadWeather(){
+  const body = document.getElementById('wx-body');
+  function render(place, temp, feels, wind, humidity, desc){
+    body.innerHTML = `
+      <div class="weather-hero">
+        <span class="temp">${Math.round(temp)}°</span>
+        <span class="desc">${desc}<br>${place}</span>
+      </div>
+      <div class="weather-grid">
+        <div><span>Feels like</span>${Math.round(feels)}°</div>
+        <div><span>Wind</span>${Math.round(wind)} km/h</div>
+        <div><span>Humidity</span>${humidity}%</div>
+        <div><span>Updated</span>${timeAgoLabel()}</div>
+      </div>`;
+  }
+  function fallback(){
+    render('Zagreb, Croatia', 24, 25, 11, 52, 'Partly cloudy');
+    body.insertAdjacentHTML('beforeend', '<div class="fallback-note">Live weather unreachable — showing sample data.</div>');
+  }
+  try{
+    if(!navigator.geolocation){ throw new Error('no geo'); }
+    navigator.geolocation.getCurrentPosition(async (pos) => {
+      try{
+        const {latitude, longitude} = pos.coords;
+        const res = await fetch(`https://api.open-meteo.com/v1/forecast?latitude=${latitude}&longitude=${longitude}&current=temperature_2m,relative_humidity_2m,apparent_temperature,wind_speed_10m,weather_code`);
+        const data = await res.json();
+        const c = data.current;
+        render('Your location', c.temperature_2m, c.apparent_temperature, c.wind_speed_10m, c.relative_humidity_2m, wmoDesc(c.weather_code));
+      }catch(e){ fallback(); }
+      setUpdated('wx-updated');
+    }, () => { fallback(); setUpdated('wx-updated'); }, {timeout:4000});
+  }catch(e){
+    fallback();
+    setUpdated('wx-updated');
+  }
+}
+
+/* ---------------- On This Day (Wikipedia, no key) ---------------- */
+async function loadOnThisDay(){
+  const body = document.getElementById('otd-body');
+  const fallback = [
+    {year:'1969', text:'Apollo 11 astronauts walk on the Moon for the first time.'},
+    {year:'1789', text:'Storming of the Bastille marks the start of the French Revolution.'},
+    {year:'1971', text:'John Lennon\'s "Imagine" is released in the United States.'}
+  ];
+  try{
+    const now = new Date();
+    const mm = String(now.getMonth()+1).padStart(2,'0');
+    const dd = String(now.getDate()).padStart(2,'0');
+    const res = await fetch(`https://en.wikipedia.org/api/rest_v1/feed/onthisday/events/${mm}/${dd}`);
+    if(!res.ok) throw new Error('bad response');
+    const data = await res.json();
+    const events = data.events.slice(0,5);
+    body.innerHTML = events.map(e => `
+      <div class="otd-item"><span class="otd-year">${e.year}</span>${e.text}</div>`).join('');
+  }catch(e){
+    body.innerHTML = fallback.map(f => `
+      <div class="otd-item"><span class="otd-year">${f.year}</span>${f.text}</div>`).join('')
+      + '<div class="fallback-note">Live feed unreachable — showing sample data.</div>';
+  }
+  setUpdated('otd-updated');
+}
+
+/* ---------------- init + refresh ---------------- */
+function loadAll(){
+  loadNYT();
+  loadStocks();
+  loadCrypto();
+  loadYouTube();
+  loadWeather();
+  loadOnThisDay();
+}
+loadAll();
+setInterval(loadNYT, 5*60*1000);
+setInterval(loadStocks, 60*1000);
+setInterval(loadCrypto, 60*1000);
+setInterval(loadOnThisDay, 60*60*1000);
+</script>
+
+</body>
+</html>
