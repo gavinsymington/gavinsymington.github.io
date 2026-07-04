@@ -3,7 +3,7 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>WIRE — Daily Desk</title>
+<title>Gav's HUD — Daily Desk</title>
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link href="https://fonts.googleapis.com/css2?family=Fraunces:ital,opsz,wght@0,9..144,400;0,9..144,600;1,9..144,500&family=Inter:wght@400;500;600&family=IBM+Plex+Mono:wght@400;500&display=swap" rel="stylesheet">
 <style>
@@ -29,6 +29,40 @@
   }
   @media (prefers-reduced-motion: reduce){
     * { animation:none !important; transition:none !important; }
+  }
+
+  /* ---------- Hero ---------- */
+  .hero{
+    position:relative;
+    width:100%;
+    height:340px;
+    overflow:hidden;
+    background:var(--ink);
+  }
+  .hero img{
+    width:100%;
+    height:100%;
+    object-fit:cover;
+    object-position:center 30%;
+    display:block;
+    filter:saturate(0.92) contrast(1.03);
+  }
+  .hero::after{
+    content:"";
+    position:absolute;
+    inset:0;
+    background:linear-gradient(180deg, rgba(23,24,26,0.05) 0%, rgba(23,24,26,0.55) 100%);
+  }
+  .hero-caption{
+    position:absolute;
+    left:32px;
+    bottom:16px;
+    z-index:2;
+    color:#F4F3EF;
+    font-family:'IBM Plex Mono', monospace;
+    font-size:11px;
+    letter-spacing:0.3px;
+    opacity:0.85;
   }
 
   /* ---------- Masthead ---------- */
@@ -223,8 +257,13 @@
 </head>
 <body>
 
+<div class="hero">
+  <img src="https://commons.wikimedia.org/wiki/Special:FilePath/The_School_of_Athens_by_Raffaello_Sanzio_da_Urbino.jpg?width=1600" alt="The School of Athens, fresco by Raphael">
+  <div class="hero-caption">The School of Athens — Raphael, 1509–1511</div>
+</div>
+
 <div class="masthead">
-  <h1>WIRE</h1>
+  <h1>Gav's HUD</h1>
   <div class="sub"><span class="live-dot"></span><span id="clock">--:--:--</span> &nbsp;·&nbsp; <span id="date">—</span></div>
 </div>
 
@@ -258,11 +297,11 @@
 
   <div class="card">
     <div class="card-head">
-      <h2>Crypto</h2>
-      <span class="updated" id="crypto-updated">—</span>
+      <h2>Literary News</h2>
+      <span class="updated" id="lit-updated">—</span>
     </div>
     <div class="card-body">
-      <table id="crypto-table"><tbody><tr><td class="loading">Loading prices…</td></tr></tbody></table>
+      <ul class="headline-list" id="lit-list"><li class="loading">Loading literary news…</li></ul>
     </div>
   </div>
 
@@ -279,11 +318,11 @@
 
   <div class="card">
     <div class="card-head">
-      <h2>Weather</h2>
+      <h2>Weather · Glasgow</h2>
       <span class="updated" id="wx-updated">—</span>
     </div>
     <div class="card-body" id="wx-body">
-      <span class="loading">Locating…</span>
+      <span class="loading">Loading weather…</span>
     </div>
   </div>
 
@@ -328,11 +367,11 @@ setInterval(tickClock, 1000);
 async function loadNYT(){
   const list = document.getElementById('nyt-list');
   const fallback = [
-    {title:"Markets steady as investors weigh rate outlook", section:"Business"},
-    {title:"Cities expand transit access ahead of summer travel season", section:"U.S."},
-    {title:"Researchers report progress on longer-lasting batteries", section:"Science"},
-    {title:"A quiet week in Washington gives way to a busy one", section:"Politics"},
-    {title:"What to know about this week's tech earnings", section:"Technology"}
+    {title:"Markets steady as investors weigh rate outlook", section:"Business", link:"https://www.nytimes.com/section/business"},
+    {title:"Cities expand transit access ahead of summer travel season", section:"U.S.", link:"https://www.nytimes.com/section/us"},
+    {title:"Researchers report progress on longer-lasting batteries", section:"Science", link:"https://www.nytimes.com/section/science"},
+    {title:"A quiet week in Washington gives way to a busy one", section:"Politics", link:"https://www.nytimes.com/section/politics"},
+    {title:"What to know about this week's tech earnings", section:"Technology", link:"https://www.nytimes.com/section/technology"}
   ];
   try{
     const res = await fetch('https://api.rss2json.com/v1/api.json?rss_url=' + encodeURIComponent('https://rss.nytimes.com/services/xml/rss/nyt/HomePage.xml'));
@@ -346,7 +385,7 @@ async function loadNYT(){
       </li>`).join('');
   }catch(e){
     list.innerHTML = fallback.map(f => `
-      <li><span class="section">${f.section}</span>${f.title}</li>`).join('');
+      <li><span class="section">${f.section}</span><a href="${f.link}" target="_blank" rel="noopener">${f.title}</a></li>`).join('');
     document.getElementById('nyt-list').insertAdjacentHTML('afterend', '<div class="fallback-note">Live feed unreachable — showing sample headlines.</div>');
   }
   setUpdated('nyt-updated');
@@ -397,10 +436,10 @@ function renderQuoteTable(tbody, rows, prefix){
   }).join('');
 }
 
-let tickerData = {stocks:[], crypto:[]};
+let tickerData = {stocks:[]};
 function buildTicker(rows, kind){
   tickerData[kind] = rows;
-  const all = [...tickerData.stocks, ...tickerData.crypto];
+  const all = [...tickerData.stocks];
   if(!all.length) return;
   const items = all.map(q => {
     const cls = q.pct >= 0 ? 'up' : 'down';
@@ -409,35 +448,32 @@ function buildTicker(rows, kind){
   document.getElementById('ticker').innerHTML = items + items; // duplicate for seamless scroll
 }
 
-/* ---------------- Crypto ---------------- */
-async function loadCrypto(){
-  const tbody = document.querySelector('#crypto-table tbody');
+/* ---------------- Literary News (Guardian Books RSS) ---------------- */
+async function loadLiterary(){
+  const list = document.getElementById('lit-list');
   const fallback = [
-    {symbol:'BTC', name:'Bitcoin', price:64200, pct:1.4},
-    {symbol:'ETH', name:'Ethereum', price:3450, pct:-0.6},
-    {symbol:'SOL', name:'Solana', price:148, pct:3.1}
+    {title:"Debut novel wins acclaim for its unflinching prose", section:"Fiction", link:"https://www.theguardian.com/books/fiction"},
+    {title:"Newly discovered letters shed light on a modernist master", section:"Archives", link:"https://www.theguardian.com/books"},
+    {title:"Independent presses report a strong year for poetry sales", section:"Poetry", link:"https://www.theguardian.com/books/poetry"},
+    {title:"Translated fiction continues its rise in English-language markets", section:"In translation", link:"https://www.theguardian.com/books/translation"},
+    {title:"This week's best-reviewed releases, from memoir to history", section:"Reviews", link:"https://www.theguardian.com/books/booksblog"}
   ];
-  let rows = null;
   try{
-    const ids = 'bitcoin,ethereum,solana';
-    const res = await fetch(`https://api.coingecko.com/api/v3/simple/price?ids=${ids}&vs_currencies=usd&include_24hr_change=true`);
+    const res = await fetch('https://api.rss2json.com/v1/api.json?rss_url=' + encodeURIComponent('https://www.theguardian.com/books/rss'));
     if(!res.ok) throw new Error('bad response');
     const data = await res.json();
-    const map = {bitcoin:'BTC', ethereum:'ETH', solana:'SOL'};
-    const names = {bitcoin:'Bitcoin', ethereum:'Ethereum', solana:'Solana'};
-    rows = Object.keys(map).map(k => ({
-      symbol: map[k],
-      name: names[k],
-      price: data[k].usd,
-      pct: data[k].usd_24h_change
-    }));
-    if(rows.some(r => r.price === undefined)) throw new Error('incomplete');
+    if(!data.items || !data.items.length) throw new Error('empty');
+    list.innerHTML = data.items.slice(0,8).map(item => `
+      <li>
+        <span class="section">${(item.categories && item.categories[0]) ? item.categories[0] : 'Books'}</span>
+        <a href="${item.link}" target="_blank" rel="noopener">${item.title}</a>
+      </li>`).join('');
   }catch(e){
-    rows = fallback;
+    list.innerHTML = fallback.map(f => `
+      <li><span class="section">${f.section}</span><a href="${f.link}" target="_blank" rel="noopener">${f.title}</a></li>`).join('');
+    document.getElementById('lit-list').insertAdjacentHTML('afterend', '<div class="fallback-note">Live feed unreachable — showing sample headlines.</div>');
   }
-  renderQuoteTable(tbody, rows, '$');
-  buildTicker(rows, 'crypto');
-  setUpdated('crypto-updated');
+  setUpdated('lit-updated');
 }
 
 /* ---------------- YouTube (channel RSS, no key required) ---------------- */
@@ -490,6 +526,8 @@ function wmoDesc(code){
     75:'Heavy snow',80:'Rain showers',95:'Thunderstorm'};
   return map[code] || 'Mixed conditions';
 }
+const GLASGOW_LAT = 55.8642;
+const GLASGOW_LON = -4.2518;
 async function loadWeather(){
   const body = document.getElementById('wx-body');
   function render(place, temp, feels, wind, humidity, desc){
@@ -506,25 +544,19 @@ async function loadWeather(){
       </div>`;
   }
   function fallback(){
-    render('Zagreb, Croatia', 24, 25, 11, 52, 'Partly cloudy');
+    render('Glasgow, Scotland', 17, 16, 19, 74, 'Overcast');
     body.insertAdjacentHTML('beforeend', '<div class="fallback-note">Live weather unreachable — showing sample data.</div>');
   }
   try{
-    if(!navigator.geolocation){ throw new Error('no geo'); }
-    navigator.geolocation.getCurrentPosition(async (pos) => {
-      try{
-        const {latitude, longitude} = pos.coords;
-        const res = await fetch(`https://api.open-meteo.com/v1/forecast?latitude=${latitude}&longitude=${longitude}&current=temperature_2m,relative_humidity_2m,apparent_temperature,wind_speed_10m,weather_code`);
-        const data = await res.json();
-        const c = data.current;
-        render('Your location', c.temperature_2m, c.apparent_temperature, c.wind_speed_10m, c.relative_humidity_2m, wmoDesc(c.weather_code));
-      }catch(e){ fallback(); }
-      setUpdated('wx-updated');
-    }, () => { fallback(); setUpdated('wx-updated'); }, {timeout:4000});
+    const res = await fetch(`https://api.open-meteo.com/v1/forecast?latitude=${GLASGOW_LAT}&longitude=${GLASGOW_LON}&current=temperature_2m,relative_humidity_2m,apparent_temperature,wind_speed_10m,weather_code`);
+    if(!res.ok) throw new Error('bad response');
+    const data = await res.json();
+    const c = data.current;
+    render('Glasgow, Scotland', c.temperature_2m, c.apparent_temperature, c.wind_speed_10m, c.relative_humidity_2m, wmoDesc(c.weather_code));
   }catch(e){
     fallback();
-    setUpdated('wx-updated');
   }
+  setUpdated('wx-updated');
 }
 
 /* ---------------- On This Day (Wikipedia, no key) ---------------- */
@@ -557,7 +589,7 @@ async function loadOnThisDay(){
 function loadAll(){
   loadNYT();
   loadStocks();
-  loadCrypto();
+  loadLiterary();
   loadYouTube();
   loadWeather();
   loadOnThisDay();
@@ -565,8 +597,9 @@ function loadAll(){
 loadAll();
 setInterval(loadNYT, 5*60*1000);
 setInterval(loadStocks, 60*1000);
-setInterval(loadCrypto, 60*1000);
+setInterval(loadLiterary, 5*60*1000);
 setInterval(loadOnThisDay, 60*60*1000);
+setInterval(loadWeather, 10*60*1000);
 </script>
 
 </body>
