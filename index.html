@@ -236,6 +236,11 @@
   .otd-item:last-child{ border-bottom:none; }
   .otd-year{ font-family:'IBM Plex Mono', monospace; color:var(--accent); font-weight:500; margin-right:6px; }
 
+  /* portfolio */
+  .pf-summary{ margin-bottom:12px; }
+  .pf-summary .pf-total{ font-family:'Fraunces', serif; font-size:28px; font-weight:600; }
+  .pf-summary .pf-change{ font-family:'IBM Plex Mono', monospace; font-size:13px; margin-left:8px; }
+
   .loading{ color:var(--muted); font-size:12.5px; font-family:'IBM Plex Mono', monospace; }
   .fallback-note{
     font-family:'IBM Plex Mono', monospace;
@@ -333,6 +338,28 @@
     </div>
     <div class="card-body" id="otd-body">
       <span class="loading">Loading history…</span>
+    </div>
+  </div>
+
+  <div class="card">
+    <div class="card-head">
+      <h2>Reddit · r/MMA + r/ufc</h2>
+      <span class="updated" id="reddit-updated">—</span>
+    </div>
+    <div class="card-body">
+      <ul class="headline-list" id="reddit-list"><li class="loading">Loading top posts…</li></ul>
+    </div>
+  </div>
+
+  <div class="card">
+    <div class="card-head">
+      <h2>Portfolio</h2>
+      <span class="updated" id="pf-updated">—</span>
+    </div>
+    <div class="card-body">
+      <div id="pf-summary" class="loading">Loading portfolio…</div>
+      <table id="pf-table"><tbody></tbody></table>
+      <div class="fallback-note">Google Finance portfolios are private and sign-in only, with no public API — they can't be embedded directly. This tracks your actual holdings (VUAG, V3EA, V3PB, V3PM, VUKG, VDPG) instead, priced live from the LSE. Share counts default to 1 — edit the PORTFOLIO list near the middle of the script to enter your real quantities.</div>
     </div>
   </div>
 
@@ -585,6 +612,108 @@ async function loadOnThisDay(){
   setUpdated('otd-updated');
 }
 
+/* ---------------- Reddit: top posts from r/MMA + r/ufc ---------------- */
+async function loadReddit(){
+  const list = document.getElementById('reddit-list');
+  const fallback = [
+    {title:"Main event finish draws praise from fighters across the roster", sub:"r/ufc", score:"4.2k"},
+    {title:"Post-fight press conference highlights and full quotes", sub:"r/MMA", score:"3.1k"},
+    {title:"Rankings shake-up after this weekend's card", sub:"r/MMA", score:"2.7k"},
+    {title:"Fighter announces next opponent for upcoming event", sub:"r/ufc", score:"2.3k"},
+    {title:"Breakdown: the gameplan that won the title", sub:"r/MMA", score:"1.9k"}
+  ];
+  try{
+    const res = await fetch('https://www.reddit.com/r/MMA+ufc/top.json?limit=8&t=week');
+    if(!res.ok) throw new Error('bad response');
+    const data = await res.json();
+    const posts = data.data && data.data.children;
+    if(!posts || !posts.length) throw new Error('empty');
+    list.innerHTML = posts.slice(0,8).map(p => {
+      const d = p.data;
+      const link = 'https://www.reddit.com' + d.permalink;
+      const score = d.ups >= 1000 ? (d.ups/1000).toFixed(1) + 'k' : d.ups;
+      return `<li>
+        <span class="section">r/${d.subreddit} · ${score} upvotes</span>
+        <a href="${link}" target="_blank" rel="noopener">${d.title}</a>
+      </li>`;
+    }).join('');
+  }catch(e){
+    list.innerHTML = fallback.map(f => `
+      <li><span class="section">${f.sub} · ${f.score} upvotes</span>${f.title}</li>`).join('');
+    document.getElementById('reddit-list').insertAdjacentHTML('afterend', '<div class="fallback-note">Live feed unreachable — showing sample posts.</div>');
+  }
+  setUpdated('reddit-updated');
+}
+
+/* ---------------- Portfolio (live prices for a fixed holdings list) ----------------
+   Google Finance portfolios are tied to a signed-in Google account and have
+   no public API, so they can't be embedded on an external page. Below are
+   your actual holdings (Vanguard UCITS ETFs, priced in GBP on the LSE).
+   Share counts default to 1 — edit the `shares` values to match what you
+   actually hold, and the value/weight figures will update automatically. */
+const PORTFOLIO = [
+  {symbol:'VUAG.L', label:'VUAG', shares:1},
+  {symbol:'V3EA.L', label:'V3EA', shares:1},
+  {symbol:'V3PB.L', label:'V3PB', shares:1},
+  {symbol:'V3PM.L', label:'V3PM', shares:1},
+  {symbol:'VUKG.L', label:'VUKG', shares:1},
+  {symbol:'VDPG.L', label:'VDPG', shares:1}
+];
+async function loadPortfolio(){
+  const summary = document.getElementById('pf-summary');
+  const tbody = document.querySelector('#pf-table tbody');
+  const symbols = PORTFOLIO.map(h => h.symbol);
+
+  function render(quotes){
+    const rows = PORTFOLIO.map(h => {
+      const q = quotes.find(q => q.symbol === h.symbol) || {price:0, pct:0};
+      const value = q.price * h.shares;
+      return {...h, price:q.price, pct:q.pct, value};
+    });
+    const total = rows.reduce((sum, r) => sum + r.value, 0);
+    const dayChangeValue = rows.reduce((sum, r) => sum + (r.value * (r.pct/100)), 0);
+    const dayChangePct = total ? (dayChangeValue / (total - dayChangeValue)) * 100 : 0;
+    const cls = dayChangePct >= 0 ? 'up' : 'down';
+
+    summary.className = 'pf-summary';
+    summary.innerHTML = `
+      <span class="pf-total">£${total.toLocaleString(undefined,{maximumFractionDigits:2})}</span>
+      <span class="pf-change ${cls}">${fmtPct(dayChangePct)} today</span>`;
+
+    tbody.innerHTML = rows.map(r => {
+      const rcls = r.pct >= 0 ? 'up' : 'down';
+      return `<tr>
+        <td class="sym">${r.label}<br><span class="name">${r.shares} sh</span></td>
+        <td class="price">£${r.value.toLocaleString(undefined,{maximumFractionDigits:2})}</td>
+        <td class="delta ${rcls}">${fmtPct(r.pct)}</td>
+      </tr>`;
+    }).join('');
+  }
+
+  function fallbackData(){
+    const sample = {'VUAG.L':[92.10,0.45],'V3EA.L':[6.77,0.74],'V3PB.L':[6.40,-0.30],
+      'V3PM.L':[7.01,1.20],'VUKG.L':[33.20,0.15],'VDPG.L':[43.01,-1.10]};
+    return PORTFOLIO.map(h => ({symbol:h.symbol, price:sample[h.symbol][0], pct:sample[h.symbol][1]}));
+  }
+
+  try{
+    const url = 'https://query1.finance.yahoo.com/v7/finance/quote?symbols=' + symbols.join(',');
+    const res = await fetch('https://api.allorigins.win/raw?url=' + encodeURIComponent(url));
+    if(!res.ok) throw new Error('bad response');
+    const data = await res.json();
+    const results = data.quoteResponse && data.quoteResponse.result;
+    if(!results || !results.length) throw new Error('empty');
+    const quotes = results.map(r => ({
+      symbol:r.symbol, price:r.regularMarketPrice, pct:r.regularMarketChangePercent
+    }));
+    render(quotes);
+  }catch(e){
+    render(fallbackData());
+    document.getElementById('pf-summary').insertAdjacentHTML('afterend', '<div class="fallback-note" style="border-top:none;margin-top:0;padding-top:0;">Live quotes unreachable — showing sample prices.</div>');
+  }
+  setUpdated('pf-updated');
+}
+
 /* ---------------- init + refresh ---------------- */
 function loadAll(){
   loadNYT();
@@ -593,6 +722,8 @@ function loadAll(){
   loadYouTube();
   loadWeather();
   loadOnThisDay();
+  loadReddit();
+  loadPortfolio();
 }
 loadAll();
 setInterval(loadNYT, 5*60*1000);
@@ -600,6 +731,8 @@ setInterval(loadStocks, 60*1000);
 setInterval(loadLiterary, 5*60*1000);
 setInterval(loadOnThisDay, 60*60*1000);
 setInterval(loadWeather, 10*60*1000);
+setInterval(loadReddit, 5*60*1000);
+setInterval(loadPortfolio, 60*1000);
 </script>
 
 </body>
