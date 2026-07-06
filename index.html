@@ -241,6 +241,23 @@
   .pf-summary .pf-total{ font-family:'Fraunces', serif; font-size:28px; font-weight:600; }
   .pf-summary .pf-change{ font-family:'IBM Plex Mono', monospace; font-size:13px; margin-left:8px; }
 
+  /* puzzle styles */
+  .puzzle-container{ display:flex; flex-direction:column; gap:8px; }
+  .puzzle-title{ font-family:'Fraunces', serif; font-size:14px; font-weight:600; color:var(--ink); }
+  .puzzle-link{ 
+    display:inline-block;
+    padding:10px 14px;
+    background:var(--accent);
+    color:#FFFFFF;
+    text-decoration:none;
+    font-family:'IBM Plex Mono', monospace;
+    font-size:12px;
+    border-radius:2px;
+    text-align:center;
+  }
+  .puzzle-link:hover{ opacity:0.85; }
+  .puzzle-desc{ font-size:12.5px; color:var(--muted); line-height:1.4; }
+
   .loading{ color:var(--muted); font-size:12.5px; font-family:'IBM Plex Mono', monospace; }
   .fallback-note{
     font-family:'IBM Plex Mono', monospace;
@@ -317,7 +334,7 @@
     </div>
     <div class="card-body">
       <ul class="video-list" id="yt-list"><li class="loading">Loading videos…</li></ul>
-      <div class="fallback-note">Latest uploads from a curated set of channels — YouTube's official Trending list requires a private API key, so this is the closest live feed available without one.</div>
+      <div class="fallback-note">Latest uploads from a curated set of channels — YouTube's official Trending list requires a private API key, so this is the closest live feed available without authentication.</div>
     </div>
   </div>
 
@@ -359,7 +376,17 @@
     <div class="card-body">
       <div id="pf-summary" class="loading">Loading portfolio…</div>
       <table id="pf-table"><tbody></tbody></table>
-      <div class="fallback-note">Google Finance portfolios are private and sign-in only, with no public API — they can't be embedded directly. This tracks your actual holdings (VUAG, V3EA, V3PB, V3PM, VUKG, VDPG) instead, priced live from the LSE. Share counts default to 1 — edit the PORTFOLIO list near the middle of the script to enter your real quantities.</div>
+      <div class="fallback-note">Google Finance portfolios are private and sign-in only, with no public API — they can't be embedded directly. This tracks your actual holdings (VUAG, V3EA, V3PB, V3PM, VUKG, VDPG) based on a simple shares-per-unit input.</div>
+    </div>
+  </div>
+
+  <div class="card">
+    <div class="card-head">
+      <h2>Daily Puzzle</h2>
+      <span class="updated" id="puzzle-updated">—</span>
+    </div>
+    <div class="card-body">
+      <div id="puzzle-body" class="loading">Loading puzzle…</div>
     </div>
   </div>
 
@@ -709,9 +736,35 @@ async function loadPortfolio(){
     render(quotes);
   }catch(e){
     render(fallbackData());
-    document.getElementById('pf-summary').insertAdjacentHTML('afterend', '<div class="fallback-note" style="border-top:none;margin-top:0;padding-top:0;">Live quotes unreachable — showing sample prices.</div>');
+    document.getElementById('pf-summary').insertAdjacentHTML('afterend', '<div class="fallback-note" style="border-top:none;margin-top:0;padding-top:0;">Live quotes unreachable — showing sample data.</div>');
   }
   setUpdated('pf-updated');
+}
+
+/* ---------------- Daily Puzzle (Minute Cryptic) -------- */
+async function loadPuzzle(){
+  const body = document.getElementById('puzzle-body');
+  const fallback = {
+    title: 'Daily Cryptic',
+    desc: 'Solve today\'s cryptic crossword puzzle'
+  };
+  try{
+    // Minute Cryptic doesn't have a public JSON API, but we can direct users to it
+    body.innerHTML = `
+      <div class="puzzle-container">
+        <div class="puzzle-title">${fallback.title}</div>
+        <div class="puzzle-desc">${fallback.desc}</div>
+        <a href="https://www.minutecryptic.com" target="_blank" rel="noopener" class="puzzle-link">Open Today's Puzzle</a>
+      </div>`;
+  }catch(e){
+    body.innerHTML = `
+      <div class="puzzle-container">
+        <div class="puzzle-title">${fallback.title}</div>
+        <div class="puzzle-desc">${fallback.desc}</div>
+        <a href="https://www.minutecryptic.com" target="_blank" rel="noopener" class="puzzle-link">Open Today's Puzzle</a>
+      </div>`;
+  }
+  setUpdated('puzzle-updated');
 }
 
 /* ---------------- init + refresh ---------------- */
@@ -724,6 +777,7 @@ function loadAll(){
   loadOnThisDay();
   loadReddit();
   loadPortfolio();
+  loadPuzzle();
 }
 loadAll();
 setInterval(loadNYT, 5*60*1000);
@@ -733,6 +787,7 @@ setInterval(loadOnThisDay, 60*60*1000);
 setInterval(loadWeather, 10*60*1000);
 setInterval(loadReddit, 5*60*1000);
 setInterval(loadPortfolio, 60*1000);
+setInterval(loadPuzzle, 60*60*1000);
 </script>
 
 </body>
